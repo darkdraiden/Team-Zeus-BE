@@ -21,3 +21,22 @@ class UserView(APIView):
         password=request.data['password']
         User.objects.create(user_email=user_email,user_name=user_name,first_name=first_name,password=password,last_name=last_name)
         return Response(response,status.HTTP_200_OK)
+class UserLoginView(APIView):
+    def post(self,request,user_name):
+            response={
+                "success": True,
+                "message": "Authenticating User"
+            }
+            if 'user_name' not in request.data:
+                response['success']=False
+                response['message']='name required'
+                return Response(response,status.HTTP_400_BAD_REQUEST)
+            user_name=request.data['user_name']
+            password=request.data['password']
+            user=User.objects.filter(user_name=user_name).first()
+            if not user:
+                return Response(response,status.HTTP_400_BAD_REQUEST)
+            if user_name==user.user_name and password==user.password:
+                return Response(response,status.HTTP_200_OK)
+            else:
+                return Response(response,status.HTTP_400_BAD_REQUEST)
