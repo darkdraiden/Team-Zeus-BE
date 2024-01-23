@@ -165,5 +165,26 @@ class AddBoardView(APIView):
         return Response(response,status.HTTP_200_OK)
 
 class BoardDetailsView(APIView):
-     def post(self,request,board_id):
-          pass
+    def get(self,request,user_name,board_id):
+        response={}
+        list=[]
+        task=Task.objects.filter(board_id=board_id).all()
+        for i in task:
+            task={}
+            task["task_id"]=i.task_id
+            task["task_name"]=i.task_name
+            task["task_status"]=i.task_status
+            task["task_desc"]=i.task_desc
+            task["time_stamp"]=i.time_stamp.strftime('%H:%M:%S')
+            list.append(task)
+        data={
+            "user_name":user_name,
+            "board_id": board_id,
+            "task": list
+        }
+        response={
+            "success": True,
+            "message": "Task details send successfully",
+            "data": data
+        }
+        return Response(response,status.HTTP_200_OK)
