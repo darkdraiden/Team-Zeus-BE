@@ -24,3 +24,8 @@ class Task(models.Model):
 class UserBoard(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE,null=True)
     board=models.ForeignKey(Board,on_delete=models.CASCADE,null=True)
+    class Meta:
+        # Define a unique constraint for the composite primary key
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'board'], name='composite_key_constraint')
+        ]
