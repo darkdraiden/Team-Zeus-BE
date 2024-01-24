@@ -20,12 +20,8 @@ class Task(models.Model):
     time_stamp=models.DateTimeField(auto_now_add=True)
     task_status=models.CharField(max_length=16)
     board=models.ForeignKey(Board,on_delete=models.CASCADE,null=True)
+    assigned_to=models.CharField(max_length=32,default='')
 
-class UserBoard(models.Model):
+class BoardUser(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE,null=True)
     board=models.ForeignKey(Board,on_delete=models.CASCADE,null=True)
-    class Meta:
-        # Define a unique constraint for the composite primary key
-        constraints = [
-            models.UniqueConstraint(fields=['user', 'board'], name='composite_key_constraint')
-        ]
