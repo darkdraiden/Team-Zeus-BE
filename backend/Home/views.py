@@ -2,6 +2,8 @@ from rest_framework import status
 from rest_framework.views import APIView,Response
 from Home.models import User,Board,Task,BoardUser
 from Home.serializers import UserSerializer
+from django.contrib.auth.hashers import check_password
+
 
 # Create your views here.
 def boards():
@@ -50,12 +52,13 @@ class UserSignupView(APIView):
             response['success']=False
             response['message']="Name required"
             return Response(response,status.HTTP_400_BAD_REQUEST)
-        user_name=request.data['user_name'].replace(" ", "")
-        first_name=request.data['first_name'].replace(" ", "")
-        last_name=request.data['last_name'].replace(" ", "")
-        user_email=request.data['user_email'].replace(" ", "")
+        user_name=request.data['user_name'].strip()
+        first_name=request.data['first_name'].strip()
+        last_name=request.data['last_name'].strip()
+        user_email=request.data['user_email'].strip()
         password=request.data['password']
-        User.objects.create(user_email=user_email,user_name=user_name,first_name=first_name,password=password,last_name=last_name)
+        obj=User.objects.create(user_email=user_email,user_name=user_name,first_name=first_name,last_name=last_name,password=password)
+        obj.save()
         response={
             "success": True,
             "message": "User added successfully"
@@ -73,8 +76,12 @@ class UserLoginView(APIView):
         password=request.data['password']
         user=User.objects.filter(user_name=user_name).first()
         if not user:
+            response={
+            "success": False,
+            "message": "User does not exist",
+        }
             return Response(response,status.HTTP_401_UNAUTHORIZED)
-        if user_name==user.user_name and password==user.password:
+        if user_name == user.user_name and check_password(password, user.password):
             board_list=boards()
             data={
                 "user_name": user_name,
@@ -154,7 +161,7 @@ class AddTaskView(APIView):
             response['success']=False
             response['message']="Need task name"
             return Response(response,status.HTTP_400_BAD_REQUEST)
-        task_name=request.data['task_name'].replace(" ", "")
+        task_name=request.data['task_name'].strip()
         task_desc=request.data['task_desc']
         task_status="To Do"
         assigned_to="Not assigned"
@@ -182,7 +189,7 @@ class AddBoardView(APIView):
         if 'board_name' not in request.data:
             response['success']=False
             response['message']="Need board name"
-        board_name=request.data['board_name']
+        board_name=request.data['board_name'].strip()
         Board.objects.create(board_name=board_name)
         board_list=boards()
         data={
