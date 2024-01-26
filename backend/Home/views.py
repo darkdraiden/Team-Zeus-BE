@@ -4,8 +4,22 @@ from Home.models import User,Board,Task,BoardUser
 from Home.serializers import UserSerializer
 from django.contrib.auth.hashers import check_password
 
+from django.contrib.sessions.middleware import SessionMiddleware
+from django.http import JsonResponse
+from django.contrib.sessions.models import Session
+
+
 
 # Create your views here.
+def validation(data):
+    session_key=data
+    queryset=Session.objects.filter(session_key=session_key)
+    if len(queryset)>0:
+        temp=queryset[0]
+        if temp.session_key==session_key:
+            return True 
+    return False
+
 def boards():
     board=Board.objects.all()
     list=[]
@@ -64,7 +78,8 @@ class UserSignupView(APIView):
             "message": "User added successfully"
         }
         return Response(response,status.HTTP_200_OK)
-    
+
+ 
 class UserLoginView(APIView):
     def post(self,request,user_name):
         response={}
@@ -83,6 +98,9 @@ class UserLoginView(APIView):
             return Response(response,status.HTTP_401_UNAUTHORIZED)
         if user_name == user.user_name and check_password(password, user.password):
             board_list=boards()
+            request.session['user_name'] = user_name
+            request.session.create()
+            session_key = request.session.session_key
             data={
                 "user_name": user_name,
                 "board_list": board_list
@@ -90,6 +108,7 @@ class UserLoginView(APIView):
             response={
             "success": True,
             "message": "User successfully authenticated",
+            "session_id":session_key,
             "data": data,
         }   
             return Response(response,status.HTTP_200_OK)
@@ -100,20 +119,26 @@ class UserLoginView(APIView):
         }
             return Response(response,status.HTTP_401_UNAUTHORIZED)
 
-    
 class UserDashboardView(APIView):
-    def get(self,request,user_name):
-        board_list=boards()
-        data={
-            "user_name": user_name,
-            "board_list": board_list
-        }
-        response={
-        "success": True,
-        "message": "User and board details send successfully",
-        "data": data,
-    }   
-        return Response(response,status.HTTP_200_OK)
+    def post(self,request,user_name):
+        if validation(request.data["session_key"]):
+            board_list=boards()
+            data={
+                "user_name": user_name,
+                "board_list": board_list
+            }
+            response={
+            "success": True,
+            "message": "User and board details send successfully",
+            "data": data,
+        }   
+            return Response(response,status.HTTP_200_OK)
+        else:
+            response={
+                "success": False,
+                "message": "Please login"
+            }
+            return Response(response,status.HTTP_401_UNAUTHORIZED)
 
 class AddUsertoBoard(APIView):
     def get(self,request,user_name,board_id):
@@ -204,24 +229,31 @@ class AddBoardView(APIView):
         return Response(response,status.HTTP_200_OK)
 
 class BoardDetailsView(APIView):
-    def get(self,request,user_name,board_id):
-        response={}
-        board_list=boards()
-        task_list=tasks(board_id,user_name)
-        bool=usercheck(user_name=user_name,board_id=board_id)
-        data={
-            "user_name":user_name,
-            "board_id": board_id,
-            "board_list": board_list,
-            "task_list": task_list,
-            "bool":bool
-        }
-        response={
-            "success": True,
-            "message": "Task details send successfully",
-            "data": data
-        }
-        return Response(response,status.HTTP_200_OK)
+    def post(self,request,user_name,board_id):
+        if validation(request.data["session_key"]):
+            response={}
+            board_list=boards()
+            task_list=tasks(board_id,user_name)
+            bool=usercheck(user_name=user_name,board_id=board_id)
+            data={
+                "user_name":user_name,
+                "board_id": board_id,
+                "board_list": board_list,
+                "task_list": task_list,
+                "bool":bool
+            }
+            response={
+                "success": True,
+                "message": "Task details send successfully",
+                "data": data
+            }
+            return Response(response,status.HTTP_200_OK)
+        else:
+            response={
+                "success": False,
+                "message": "Please login"
+            }
+            return Response(response,status.HTTP_401_UNAUTHORIZED)
 
 class PeopleView(APIView):
     def get(Self,request,board_id,user_name):
