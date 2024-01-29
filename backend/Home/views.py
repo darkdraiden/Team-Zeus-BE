@@ -3,19 +3,22 @@ from rest_framework.views import APIView,Response
 from Home.models import User,Board,Task,BoardUser
 from Home.serializers import UserSerializer
 from django.contrib.auth.hashers import check_password
-
+from datetime import datetime
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.http import JsonResponse
 from django.contrib.sessions.models import Session
-
-
+from django.utils import timezone
 
 # Create your views here.
 def validation(data):
     session_key=data
+    if session_key=="":
+        return False
     queryset=Session.objects.filter(session_key=session_key)
     if len(queryset)>0:
         temp=queryset[0]
+        if queryset[0].expire_date<timezone.now():
+            return False
         if temp.session_key==session_key:
             return True 
     return False
@@ -44,10 +47,7 @@ def tasks(board_id,user_name):
         dict["assigned_to"]=i.assigned_to
         list.append(dict)
     for i in range (len(list)):
-        if list[i]["assigned_to"]!=user_name and list[i]["assigned_to"]!="Not Assigned":
-            list.insert(0,list.pop(i))
-    for i in range (len(list)):
-        if list[i]["assigned_to"]==user_name:
+        if user_name in list[i]["assigned_to"].split(","):
             list.insert(0,list.pop(i))
     return list
 
@@ -82,7 +82,7 @@ class UserSignupView(APIView):
  
 class UserLoginView(APIView):
     def post(self,request,user_name):
-        response={}
+        response={"user_name":"user_name"}
         if 'user_name' not in request.data:
             response['success']=False
             response['message']='user name required'
@@ -119,7 +119,20 @@ class UserLoginView(APIView):
             "message": "Invalid credentials",
         }
             return Response(response,status.HTTP_401_UNAUTHORIZED)
-
+        
+class UserLogoutView(APIView):        
+    def post(self,request,user_name):
+        session=Session.objects.get(session_key=request.data["session_key"])
+        response={
+            "success": True,
+            "message": "Session Deleted succesfully!"
+        }
+        if session is None:
+            response['success']=False,
+            response['message']='Employee not found!'
+            return Response(response,status.HTTP_404_NOT_FOUND)
+        session.delete()
+        return Response(response,status.HTTP_204_NO_CONTENT)
 class UserDashboardView(APIView):
     def post(self,request,user_name):
         if validation(request.data["session_key"]):
@@ -311,8 +324,14 @@ class AssignTaskView(APIView):
     def put(self,request,user_name,board_id,task_id):
         response={}
         task=Task.objects.filter(task_id=task_id).first()
-        task.assigned_to=user_name
-        task.save()
+        if user_name in task.assigned_to.split(","):
+            task.save()
+        elif task.assigned_to=="Not assigned":
+            task.assigned_to=user_name
+            task.save()
+        else:
+            task.assigned_to=task.assigned_to+","+user_name
+            task.save()
         board_list=boards()
         task_list=tasks(board_id,user_name)
         bool=usercheck(user_name=user_name,board_id=board_id)
