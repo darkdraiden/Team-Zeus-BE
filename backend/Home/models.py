@@ -26,7 +26,7 @@ class Task(models.Model):
     time_stamp=models.DateTimeField(auto_now_add=True)
     task_status=models.CharField(max_length=16)
     board=models.ForeignKey(Board,on_delete=models.CASCADE,null=True)
-    assigned_to=models.CharField(max_length=32,default='')
+    assigned_to=models.CharField(max_length=4096,default='')
 
 class BoardUser(models.Model):
     user=models.ForeignKey(User,on_delete=models.CASCADE,null=True)
