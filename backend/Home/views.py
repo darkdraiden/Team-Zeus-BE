@@ -109,6 +109,7 @@ class UserLoginView(APIView):
             "success": True,
             "message": "User successfully authenticated",
             "session_id":session_key,
+            "user_name":user_name,
             "data": data,
         }   
             return Response(response,status.HTTP_200_OK)
